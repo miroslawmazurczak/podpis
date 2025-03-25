@@ -88,7 +88,7 @@
       const signatureData = canvas.toDataURL("image/png"); // Konwertujemy podpis na Base64
       const fileName = `podpis_${new Date().toISOString().slice(0, 10)}.png`;
 
-      fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+      fetch('https://script.google.com/macros/s/AKfycbx-8yv6ffVStRPdyV-iL4WuiQ5gBX22SIkIIIJHHndi0UtzrwMga6naQV5xCdAVrwcg/exec', {
         method: 'POST',
         mode: 'cors',
         headers: {
