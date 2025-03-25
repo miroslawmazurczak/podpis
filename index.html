@@ -1,105 +1,108 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Podpis na Canvasie</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Podpis</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    canvas {
-      border: 1px solid black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       margin: 20px;
     }
+    canvas {
+      border: 2px solid #000;
+      width: 300px; /* Ustaw stałą szerokość */
+      height: 150px; /* Ustaw stałą wysokość */
+      touch-action: none; /* Zapobiega przesuwaniu ekranu na urządzeniach mobilnych */
+    }
     button {
-      margin-top: 20px;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-  <h1>Podpisz poniżej</h1>
-
-  <!-- Canvas do rysowania podpisu -->
-  <canvas id="signatureCanvas" width="500" height="200"></canvas><br>
-  <button id="clearButton">Wyczyść</button><br><br>
-
-  <input type="text" id="name" placeholder="Wpisz swoje imię" required><br><br>
-  <button id="submitButton">Wyślij podpis</button>
+  <h2>Podpisz się:</h2>
+  <canvas id="signature-pad" width="300" height="150"></canvas>
+  <button onclick="clearSignature()">Wyczyść</button>
+  <button onclick="sendSignature()">Wyślij podpis</button>
 
   <script>
-    // Inicjalizacja canvas i kontekstu
-    const canvas = document.getElementById('signatureCanvas');
-    const ctx = canvas.getContext('2d');
-    const clearButton = document.getElementById('clearButton');
-    const submitButton = document.getElementById('submitButton');
-    const nameInput = document.getElementById('name');
+    const canvas = document.getElementById("signature-pad");
+    const ctx = canvas.getContext("2d");
 
-    let drawing = false;
+    let isDrawing = false;
 
-    // Funkcja do rozpoczęcia rysowania
+    canvas.addEventListener("mousedown", (e) => startDrawing(e));
+    canvas.addEventListener("mouseup", () => stopDrawing());
+    canvas.addEventListener("mousemove", (e) => draw(e));
+
+    canvas.addEventListener("touchstart", (e) => startDrawing(e.touches[0]));
+    canvas.addEventListener("touchend", () => stopDrawing());
+    canvas.addEventListener("touchmove", (e) => draw(e.touches[0]));
+
     function startDrawing(event) {
-      drawing = true;
+      isDrawing = true;
       ctx.beginPath();
-      ctx.moveTo(event.offsetX, event.offsetY);
+      ctx.moveTo(
+        event.clientX - canvas.getBoundingClientRect().left,
+        event.clientY - canvas.getBoundingClientRect().top
+      );
     }
 
-    // Funkcja do rysowania
     function draw(event) {
-      if (!drawing) return;
-      ctx.lineTo(event.offsetX, event.offsetY);
+      if (!isDrawing) return;
+      ctx.lineTo(
+        event.clientX - canvas.getBoundingClientRect().left,
+        event.clientY - canvas.getBoundingClientRect().top
+      );
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
       ctx.stroke();
     }
 
-    // Funkcja do zakończenia rysowania
     function stopDrawing() {
-      drawing = false;
+      isDrawing = false;
+      ctx.closePath();
     }
 
-    // Funkcja czyszcząca canvas
-    clearButton.addEventListener('click', () => {
+    function clearSignature() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
+    }
 
-    // Przechwytywanie zdarzeń dla rysowania
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
+    function sendSignature() {
+      const signatureData = canvas.toDataURL("image/png"); // Konwertujemy podpis na Base64
+      const fileName = `podpis_${new Date().toISOString().slice(0, 10)}.png`;
 
-    // Funkcja do wysyłania podpisu do Google Apps Script
-    submitButton.addEventListener('click', async () => {
-      // Sprawdzanie, czy pole z imieniem nie jest puste
-      if (!nameInput.value.trim()) {
-        alert("Wpisz swoje imię.");
-        return;
-      }
-
-      // Pobieranie danych podpisu z canvas w formacie Base64
-      const signatureData = canvas.toDataURL('image/png');
-      
-      // Kodowanie danych w Base64
-      const fileData = signatureData.split(',')[1]; // Usunięcie nagłówka data:image/png;base64,
-
-      // URL aplikacji Google Apps Script (zmień na swój URL)
-      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwCMz_clAQeVSL637VoV6k1cEamQlTIeriHDLiWncZPd4bEmJYi6NEv4RQuuY2Oh1BTEA/exec';
-      
-      // Wysyłanie danych do Google Apps Script
-      const response = await fetch(scriptUrl + '?fileName=' + encodeURIComponent(nameInput.value + '_podpis.png') + '&fileData=' + encodeURIComponent(fileData), {
-        method: 'GET',
+      fetch('https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec', {
+        method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json'
-        }
-      });
-
-      const result = await response.json();
-      if (result.status === 'success') {
-        alert('Podpis zapisany! Możesz go pobrać z: ' + result.fileUrl);
-      } else {
-        alert('Błąd: ' + result.message);
-      }
-    });
+        },
+        body: JSON.stringify({
+          signature: signatureData,
+          fileName: fileName
+        })
+      })
+      .then(response => response.json())
+      .then(data => alert(data.message))
+      .catch(error => alert("Błąd: " + error.message));
+    }
   </script>
 </body>
 </html>
