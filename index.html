@@ -83,7 +83,7 @@
       const fileData = signatureData.split(',')[1]; // Usunięcie nagłówka data:image/png;base64,
 
       // URL aplikacji Google Apps Script (zmień na swój URL)
-      const scriptUrl = 'https://script.google.com/macros/s/AKfycbzArRzbYwZ23bdxQM8so-kTdvjB4QFL9VT-a03p_WB_Ed9pj0yxEUziy4-gi8I4VQoOVQ/exec';
+      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwCMz_clAQeVSL637VoV6k1cEamQlTIeriHDLiWncZPd4bEmJYi6NEv4RQuuY2Oh1BTEA/exec';
       
       // Wysyłanie danych do Google Apps Script
       const response = await fetch(scriptUrl + '?fileName=' + encodeURIComponent(nameInput.value + '_podpis.png') + '&fileData=' + encodeURIComponent(fileData), {
