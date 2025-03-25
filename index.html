@@ -1,107 +1,102 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Podpis</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 20px;
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script>
+    let CLIENT_ID = '324527415047-kkk132tv8nk2hupmp8gv3rq6ek21q1vb.apps.googleusercontent.com'; // Twój Client ID
+    let API_KEY = 'AIzaSyCArydUCyaoMGZvcFla4oWFb9x713IFR0I'; // Twój API Key
+    let SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    
+    function authenticate() {
+      return gapi.auth2.getAuthInstance().signIn({
+        scope: SCOPES
+      });
     }
-    canvas {
-      border: 2px solid #000;
-      width: 300px; /* Ustaw stałą szerokość */
-      height: 150px; /* Ustaw stałą wysokość */
-      touch-action: none; /* Zapobiega przesuwaniu ekranu na urządzeniach mobilnych */
+
+    function loadClient() {
+      gapi.client.setApiKey(API_KEY);
+      return gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest");
     }
-    button {
-      margin-top: 10px;
-      padding: 10px;
-      font-size: 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background 0.3s;
+
+    function uploadToDrive(imageData, fileName) {
+      const boundary = '-------31415926535897932384626433832795';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const closeDelim = "\r\n--" + boundary + "--";
+      const metadata = {
+        'name': fileName,
+        'mimeType': 'image/png'
+      };
+
+      const base64Data = imageData.split(',')[1];
+      const data = Utilities.base64Decode(base64Data);
+
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: image/png\r\n' +
+        'Content-Transfer-Encoding: base64\r\n\r\n' +
+        base64Data +
+        closeDelim;
+
+      const request = gapi.client.request({
+        'path': '/upload/drive/v3/files?uploadType=multipart',
+        'method': 'POST',
+        'headers': {
+          'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+        },
+        'body': multipartRequestBody
+      });
+
+      request.execute(function(response) {
+        console.log(response);
+      });
     }
-    button:hover {
-      background-color: #45a049;
+
+    function init() {
+      gapi.load('client:auth2', function() {
+        gapi.auth2.init({
+          client_id: CLIENT_ID
+        });
+      });
     }
-  </style>
+  </script>
 </head>
-<body>
-  <h2>Podpisz się:</h2>
-  <canvas id="signature-pad" width="300" height="150"></canvas>
-  <button onclick="clearSignature()">Wyczyść</button>
-  <button onclick="sendSignature()">Wyślij podpis</button>
+<body onload="init()">
+  <h1>Podpisz się</h1>
+  <canvas id="signatureCanvas" width="300" height="150" style="border: 1px solid #000;"></canvas>
+  <button onclick="saveSignature()">Zapisz Podpis</button>
 
   <script>
-    const canvas = document.getElementById("signature-pad");
-    const ctx = canvas.getContext("2d");
+    let canvas = document.getElementById("signatureCanvas");
+    let ctx = canvas.getContext("2d");
 
-    let isDrawing = false;
-
-    canvas.addEventListener("mousedown", (e) => startDrawing(e));
-    canvas.addEventListener("mouseup", () => stopDrawing());
-    canvas.addEventListener("mousemove", (e) => draw(e));
-
-    canvas.addEventListener("touchstart", (e) => startDrawing(e.touches[0]));
-    canvas.addEventListener("touchend", () => stopDrawing());
-    canvas.addEventListener("touchmove", (e) => draw(e.touches[0]));
-
-    function startDrawing(event) {
-      isDrawing = true;
+    // Rysowanie podpisu
+    let drawing = false;
+    canvas.addEventListener("mousedown", (e) => {
+      drawing = true;
+      ctx.moveTo(e.offsetX, e.offsetY);
       ctx.beginPath();
-      ctx.moveTo(
-        event.clientX - canvas.getBoundingClientRect().left,
-        event.clientY - canvas.getBoundingClientRect().top
-      );
-    }
-
-    function draw(event) {
-      if (!isDrawing) return;
-      ctx.lineTo(
-        event.clientX - canvas.getBoundingClientRect().left,
-        event.clientY - canvas.getBoundingClientRect().top
-      );
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    }
-
-    function stopDrawing() {
-      isDrawing = false;
-      ctx.closePath();
-    }
-
-    function clearSignature() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function sendSignature() {
-      const signatureData = canvas.toDataURL("image/png"); // Konwertujemy podpis na Base64
-      const fileName = `podpis_${new Date().toISOString().slice(0, 10)}.png`;
-
-      fetch('https://script.google.com/macros/s/AKfycbx-8yv6ffVStRPdyV-iL4WuiQ5gBX22SIkIIIJHHndi0UtzrwMga6naQV5xCdAVrwcg/exec', {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          signature: signatureData,
-          fileName: fileName
-        })
-      })
-      .then(response => response.json())
-      .then(data => alert(data.message))
-      .catch(error => alert("Błąd: " + error.message));
+    });
+    canvas.addEventListener("mousemove", (e) => {
+      if (drawing) {
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+      }
+    });
+    canvas.addEventListener("mouseup", () => drawing = false);
+    
+    function saveSignature() {
+      let imageData = canvas.toDataURL("image/png");
+      let fileName = "Podpis_" + new Date().toISOString() + ".png";
+      
+      authenticate().then(loadClient).then(function() {
+        uploadToDrive(imageData, fileName);
+      });
     }
   </script>
 </body>
