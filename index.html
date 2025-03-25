@@ -1,38 +1,82 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wyszukiwarka profili</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Podpis na Canvas</title>
+</head>
+<body>
+    <h2>Podpisz się poniżej:</h2>
+    <input type="text" id="nameInput" placeholder="Wpisz swoje imię" />
+    <br><br>
+    <canvas id="signatureCanvas" width="400" height="200" style="border: 1px solid #000;"></canvas>
+    <br>
+    <button onclick="clearCanvas()">Wyczyść</button>
+    <button onclick="uploadToDrive()">Wyślij do Google Drive</button>
+
     <script>
-        function openPage() {
-            // Pobranie wartości wpisanej przez użytkownika
-            var pageName = document.getElementById("pageInput").value;
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
 
-            // Sprawdzenie, czy użytkownik wpisał jakąś nazwę
-            if (pageName) {
-                // Dodanie rozszerzenia .html jeśli nie zostało wpisane
-                if (!pageName.endsWith(".html")) {
-                    pageName += ".html";
-                }
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
 
-                // Dodanie prefiksu katalogu "strona/"
-                var filePath = "strona/" + pageName;
+        function startDrawing(event) {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(event.offsetX, event.offsetY);
+        }
 
-                // Przekierowanie na stronę o podanej nazwie
-                window.location.href = filePath;
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function draw(event) {
+            if (!isDrawing) return;
+            ctx.lineTo(event.offsetX, event.offsetY);
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        async function uploadToDrive() {
+            const name = document.getElementById('nameInput').value;
+            if (!name) {
+                alert('Proszę wpisać imię!');
+                return;
+            }
+
+            const dataURL = canvas.toDataURL('image/png');
+            const base64Image = dataURL.replace(/^data:image\/(png|jpg);base64,/, '');
+
+            // Tworzenie nazwy pliku: imię + data
+            const currentDate = new Date().toISOString().replace(/[:.]/g, '-');
+            const fileName = `${name}_${currentDate}.png`;
+
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbzE90C_7H_DMkInEWFq8nF03Qjd_nsphdVrRDTZLKCNaJCU-OwWhfc3sMdgbODUmYNEEw/exec';
+
+            const response = await fetch(scriptURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    fileName: fileName,
+                    fileData: base64Image
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert(`Podpis został zapisany w Google Drive!\n📁 Link: ${result.fileUrl}`);
             } else {
-                // Jeśli pole jest puste, wyświetl alert
-                alert("Wpisz nazwę strony.");
+                alert('Błąd podczas zapisywania podpisu.');
             }
         }
     </script>
-</head>
-<body>
-    <center>
-        <h1>Wyszukaj profil</h1>
-        <input type="text" id="pageInput" placeholder="Wpisz item"><br><br>
-        <button onclick="openPage()">Szukaj</button>
-    </center>
 </body>
 </html>
