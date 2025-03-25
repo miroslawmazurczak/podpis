@@ -3,30 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Przekierowanie na lokalną stronę</title>
+    <title>Wyszukiwarka profili</title>
     <script>
         function openPage() {
+            // Pobranie wartości wpisanej przez użytkownika
             var pageName = document.getElementById("pageInput").value;
-            // Sprawdzanie, czy użytkownik wprowadził jakąś nazwę
+
+            // Sprawdzenie, czy użytkownik wpisał jakąś nazwę
             if (pageName) {
                 // Dodanie rozszerzenia .html jeśli nie zostało wpisane
                 if (!pageName.endsWith(".html")) {
                     pageName += ".html";
                 }
-                // Tworzenie pełnej ścieżki do lokalnego pliku
-                var filePath = ".../strona/" + pageName;
-                // Przekierowanie do strony
+
+                // Dodanie prefiksu katalogu "strona/"
+                var filePath = "strona/" + pageName;
+
+                // Przekierowanie na stronę o podanej nazwie
                 window.location.href = filePath;
             } else {
-                alert("Wpisz nazwę pliku strony.");
+                // Jeśli pole jest puste, wyświetl alert
+                alert("Wpisz nazwę strony.");
             }
         }
     </script>
 </head>
 <body>
-    <h1>Znajdź item</h1>
-    <label for="pageInput">Wpisz item:</label>
-    <input type="text" id="pageInput" placeholder="Wpisz nazwę pliku (np. strona)">
-    <button onclick="openPage()">Szukaj</button>
+    <center>
+        <h1>Wyszukaj profil</h1>
+        <input type="text" id="pageInput" placeholder="Wpisz item"><br><br>
+        <button onclick="openPage()">Szukaj</button>
+    </center>
 </body>
 </html>
